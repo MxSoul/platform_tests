@@ -7,7 +7,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-const EventChannel _platformVelocityEventChannel = EventChannel('scroll_overlay.flutter.io/velocity');
+import 'linked_scroll_controller.dart';
+
+const EventChannel _platformVelocityEventChannel =
+    EventChannel('scroll_overlay.flutter.io/velocity');
 
 void main() {
   runApp(
@@ -34,7 +37,8 @@ class _FlutterDemoState extends State<FlutterDemo> {
   /// Setting this to not too small value - to get a meaningful velocity information,
   /// and not too big - to distinguish individual digits after thousands.
   static const int measurementsPerSecond = 25;
-  static const Duration velocityTimerInverval = Duration(milliseconds: 1000 ~/ measurementsPerSecond);
+  static const Duration velocityTimerInverval =
+      Duration(milliseconds: 1000 ~/ measurementsPerSecond);
 
   /// The base item extent at 0 index.
   ///
@@ -43,9 +47,12 @@ class _FlutterDemoState extends State<FlutterDemo> {
 
   double? flutterVelocity;
   double? platformVelocity;
-  final ScrollController controller = ScrollController();
+  ScrollController controller = ScrollController();
+  // ScrollController controllerCopy = ScrollController();
+  // final TrackingScrollController trackingScrollController = TrackingScrollController();
   late Timer velocityTimer;
   double? oldOffset;
+  // LinkedScrollControllerGroup linkedScrollControllerGroup = LinkedScrollControllerGroup();
 
   @override
   void initState() {
@@ -64,13 +71,17 @@ class _FlutterDemoState extends State<FlutterDemo> {
         oldOffset = controller.offset;
       });
     });
-    _platformVelocityEventChannel.receiveBroadcastStream().listen((dynamic velocity) {
+    _platformVelocityEventChannel
+        .receiveBroadcastStream()
+        .listen((dynamic velocity) {
       if (velocity != platformVelocity) {
         setState(() {
           platformVelocity = velocity / MediaQuery.of(context).devicePixelRatio;
         });
       }
     });
+    // controller = linkedScrollControllerGroup.addAndGet();
+    // controllerCopy = linkedScrollControllerGroup.addAndGet();
   }
 
   @override
@@ -86,11 +97,13 @@ class _FlutterDemoState extends State<FlutterDemo> {
       body: Stack(
         children: <Widget>[
           ListView.builder(
+            addRepaintBoundaries: false,
             controller: controller,
+            physics: ClampingScrollPhysics(),
             itemCount: 1000,
             itemBuilder: (BuildContext context, int index) {
               return Container(
-                height: (baseItemExtent + index).toDouble(),
+                height: (baseItemExtent + index * 3).toDouble(),
                 decoration: BoxDecoration(
                   border: Border.all(
                     color: const Color(0xFF666666),
@@ -112,16 +125,47 @@ class _FlutterDemoState extends State<FlutterDemo> {
               );
             },
           ),
+          // ListView.builder(
+          //   addRepaintBoundaries: false,
+          //   controller: controllerCopy,
+          //   physics: BouncingScrollPhysicsTemp(),
+          //   itemCount: 1000,
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return Container(
+          //       height: (baseItemExtent + index * 3).toDouble(),
+          //       decoration: BoxDecoration(
+          //         border: Border.all(
+          //           color: const Color(0xFF666666),
+          //           width: 0.0,
+          //         ),
+          //       ),
+          //       child: Row(
+          //         crossAxisAlignment: CrossAxisAlignment.center,
+          //         children: <Widget>[
+          //           Padding(
+          //             padding: const EdgeInsets.only(left: 100.0),
+          //             child: Text(
+          //               'Flutter $index',
+          //               style: const TextStyle(fontSize: 16.0),
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     );
+          //   },
+          // ),
           Align(
             alignment: FractionalOffset.centerRight,
             child: DefaultTextStyle.merge(
-              style: const TextStyle (fontSize: 18.0),
+              style: const TextStyle(fontSize: 18.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Flutter velocity\n${flutterVelocity?.round().abs() ?? ""}'),
-                  Text('Platform velocity\n${platformVelocity?.round().abs() ?? ""}'),
+                  Text(
+                      'Flutter velocity\n${flutterVelocity?.round().abs() ?? ""}'),
+                  Text(
+                      'Platform velocity\n${platformVelocity?.round().abs() ?? ""}'),
                 ],
               ),
             ),
